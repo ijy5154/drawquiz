@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>드로우 퀴즈</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"></script>
+        <style>
+            body {
+                font-family:
+                    "Pretendard", "SUIT", "Apple SD Gothic Neo", sans-serif;
+                background:
+                    radial-gradient(
+                        circle at 15% 20%,
+                        rgba(245, 158, 11, 0.18),
+                        transparent 40%
+                    ),
+                    radial-gradient(
+                        circle at 85% 10%,
+                        rgba(14, 165, 233, 0.2),
+                        transparent 42%
+                    ),
+                    radial-gradient(
+                        circle at 50% 90%,
+                        rgba(236, 72, 153, 0.15),
+                        transparent 45%
+                    ),
+                    #0b1020;
+                min-height: 100vh;
+            }
+
+            .glass {
+                background: rgba(15, 23, 42, 0.78);
+                backdrop-filter: blur(12px);
+                border: 1px solid rgba(255, 255, 255, 0.14);
+            }
+
+            .heroTitle {
+                letter-spacing: 0.03em;
+                text-shadow: 0 8px 30px rgba(245, 158, 11, 0.25);
+            }
+
+            .toolBtn {
+                transition:
+                    transform 140ms ease,
+                    box-shadow 160ms ease,
+                    border-color 160ms ease;
+            }
+
+            .toolBtn:hover {
+                transform: translateY(-2px);
+            }
+
+            .toolBtn.active {
+                border-color: rgba(251, 191, 36, 0.8);
+                box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2);
+            }
+
+            .drawCanvas {
+                touch-action: none;
+                background-image:
+                    linear-gradient(
+                        rgba(148, 163, 184, 0.08) 1px,
+                        transparent 1px
+                    ),
+                    linear-gradient(
+                        90deg,
+                        rgba(148, 163, 184, 0.08) 1px,
+                        transparent 1px
+                    );
+                background-size: 24px 24px;
+            }
+        </style>
+    </head>
+    <body class="text-slate-100">
+        <div
+            class="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-8 md:px-8"
+        >
+            <header class="glass rounded-3xl p-6 md:p-8">
+                <p
+                    class="mb-2 text-xs font-bold uppercase tracking-[0.28em] text-cyan-300"
+                >
+                    realtime party game mockup
+                </p>
+                <h1
+                    class="heroTitle text-3xl font-black text-amber-300 md:text-5xl"
+                >
+                    그림으로 내는 퀴즈 메신저
+                </h1>
+                <p
+                    class="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300 md:text-base"
+                >
+                    문제 출제자가 그림을 그리고 정답과 힌트를 설정한 뒤 링크를
+                    공유하면, 상대방이 같은 화면에서 그림을 보고 정답을 맞출 수
+                    있습니다. 백엔드 없이 동작하는 구조라 링크 길이에 제한이
+                    있을 수 있어요.
+                </p>
+            </header>
+
+            <main class="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
+                <section class="glass rounded-3xl p-4 md:p-6">
+                    <div class="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                            <h2 class="text-xl font-extrabold text-amber-200">
+                                드로잉 보드
+                            </h2>
+                            <p class="text-xs text-slate-400 md:text-sm">
+                                마우스/터치로 그림을 그려 문제를 만드세요.
+                            </p>
+                        </div>
+                        <span
+                            id="modeBadge"
+                            class="rounded-full border border-cyan-300/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-200"
+                            >출제 모드</span
+                        >
+                    </div>
+
+                    <div class="mb-4 flex flex-wrap items-center gap-2">
+                        <button
+                            class="toolBtn active rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                            data-color="#f8fafc"
+                        >
+                            화이트
+                        </button>
+                        <button
+                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                            data-color="#f59e0b"
+                        >
+                            오렌지
+                        </button>
+                        <button
+                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                            data-color="#22d3ee"
+                        >
+                            시안
+                        </button>
+                        <button
+                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                            data-color="#34d399"
+                        >
+                            민트
+                        </button>
+                        <button
+                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                            data-color="#f43f5e"
+                        >
+                            로즈
+                        </button>
+                        <button
+                            id="eraserBtn"
+                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                        >
+                            지우개
+                        </button>
+                        <button
+                            id="undoBtn"
+                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                        >
+                            실행 취소
+                        </button>
+                        <button
+                            id="clearBtn"
+                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                        >
+                            전체 지우기
+                        </button>
+                        <label
+                            class="ml-auto flex items-center gap-2 text-xs text-slate-300"
+                        >
+                            굵기
+                            <input
+                                id="sizeRange"
+                                type="range"
+                                min="2"
+                                max="24"
+                                value="6"
+                                class="w-24 accent-amber-400"
+                            />
+                        </label>
+                    </div>
+
+                    <canvas
+                        id="drawCanvas"
+                        class="drawCanvas h-[420px] w-full rounded-2xl border border-white/20 bg-slate-950"
+                    ></canvas>
+                </section>
+
+                <section class="glass rounded-3xl p-4 md:p-6">
+                    <h2 class="text-xl font-extrabold text-cyan-200">
+                        퀴즈 패널
+                    </h2>
+                    <p class="mt-1 text-xs text-slate-400 md:text-sm">
+                        정답 입력, 링크 생성, 카카오 공유를 여기서 진행합니다.
+                    </p>
+
+                    <div id="creatorPanel" class="mt-4 space-y-3">
+                        <label
+                            class="block text-sm font-semibold text-slate-200"
+                            >정답</label
+                        >
+                        <input
+                            id="answerInput"
+                            type="text"
+                            maxlength="40"
+                            class="w-full rounded-xl border border-white/20 bg-slate-900/80 px-3 py-2 text-sm outline-none ring-amber-300/40 transition focus:ring"
+                            placeholder="예: 기린"
+                        />
+
+                        <label
+                            class="block text-sm font-semibold text-slate-200"
+                            >힌트</label
+                        >
+                        <input
+                            id="hintInput"
+                            type="text"
+                            maxlength="80"
+                            class="w-full rounded-xl border border-white/20 bg-slate-900/80 px-3 py-2 text-sm outline-none ring-cyan-300/40 transition focus:ring"
+                            placeholder="예: 목이 아주 길어요"
+                        />
+
+                        <label
+                            class="block text-sm font-semibold text-slate-200"
+                            >제한 시간(초)</label
+                        >
+                        <input
+                            id="limitInput"
+                            type="number"
+                            min="10"
+                            max="300"
+                            value="60"
+                            class="w-full rounded-xl border border-white/20 bg-slate-900/80 px-3 py-2 text-sm outline-none ring-fuchsia-300/40 transition focus:ring"
+                        />
+
+                        <button
+                            id="makeLinkBtn"
+                            class="w-full rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-2.5 text-sm font-black text-slate-950 transition hover:scale-[1.01]"
+                        >
+                            문제 링크 만들기
+                        </button>
+                        <button
+                            id="shareBtn"
+                            class="w-full rounded-xl border border-cyan-300/40 bg-slate-900/90 px-4 py-2.5 text-sm font-bold text-cyan-200 transition hover:bg-cyan-500/10"
+                        >
+                            카카오로 문제 보내기
+                        </button>
+
+                        <label
+                            class="block text-xs font-semibold text-slate-400"
+                            >생성된 링크</label
+                        >
+                        <textarea
+                            id="shareLinkBox"
+                            readonly
+                            class="h-24 w-full rounded-xl border border-white/15 bg-slate-950/80 p-3 text-xs text-slate-300"
+                        ></textarea>
+                    </div>
+
+                    <div id="solverPanel" class="mt-4 hidden space-y-3">
+                        <div
+                            class="rounded-xl border border-cyan-300/25 bg-cyan-500/10 p-3"
+                        >
+                            <p class="text-xs font-semibold text-cyan-200">
+                                힌트
+                            </p>
+                            <p
+                                id="solverHint"
+                                class="mt-1 text-sm text-slate-200"
+                            >
+                                -
+                            </p>
+                        </div>
+                        <div
+                            class="rounded-xl border border-amber-300/25 bg-amber-500/10 p-3"
+                        >
+                            <p class="text-xs font-semibold text-amber-200">
+                                제한 시간
+                            </p>
+                            <p
+                                id="solverTimer"
+                                class="mt-1 text-sm text-slate-100"
+                            >
+                                -
+                            </p>
+                        </div>
+
+                        <label
+                            class="block text-sm font-semibold text-slate-200"
+                            >내 정답</label
+                        >
+                        <input
+                            id="guessInput"
+                            type="text"
+                            maxlength="40"
+                            class="w-full rounded-xl border border-white/20 bg-slate-900/80 px-3 py-2 text-sm outline-none ring-emerald-300/40 transition focus:ring"
+                            placeholder="정답을 입력해보세요"
+                        />
+                        <button
+                            id="checkBtn"
+                            class="w-full rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 px-4 py-2.5 text-sm font-black text-slate-950 transition hover:scale-[1.01]"
+                        >
+                            정답 확인
+                        </button>
+                        <p
+                            id="resultText"
+                            class="rounded-xl border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200"
+                        >
+                            링크를 받은 사람은 여기서 정답을 맞출 수 있어요.
+                        </p>
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <script>
+            const kakaoJavaScriptKey = "1b80ad054f416ba4241300feac182db2";
+            const baseShareUrl = `${location.origin}${location.pathname}`;
+
+            const drawCanvas = document.getElementById("drawCanvas");
+            const canvasCtx = drawCanvas.getContext("2d");
+            const colorButtons = Array.from(
+                document.querySelectorAll("[data-color]"),
+            );
+            const eraserBtn = document.getElementById("eraserBtn");
+            const undoBtn = document.getElementById("undoBtn");
+            const clearBtn = document.getElementById("clearBtn");
+            const sizeRange = document.getElementById("sizeRange");
+
+            const creatorPanel = document.getElementById("creatorPanel");
+            const solverPanel = document.getElementById("solverPanel");
+            const modeBadge = document.getElementById("modeBadge");
+
+            const answerInput = document.getElementById("answerInput");
+            const hintInput = document.getElementById("hintInput");
+            const limitInput = document.getElementById("limitInput");
+            const makeLinkBtn = document.getElementById("makeLinkBtn");
+            const shareBtn = document.getElementById("shareBtn");
+            const shareLinkBox = document.getElementById("shareLinkBox");
+
+            const solverHint = document.getElementById("solverHint");
+            const solverTimer = document.getElementById("solverTimer");
+            const guessInput = document.getElementById("guessInput");
+            const checkBtn = document.getElementById("checkBtn");
+            const resultText = document.getElementById("resultText");
+
+            const drawState = {
+                isDrawing: false,
+                currentColor: "#f8fafc",
+                currentSize: 6,
+                eraserOn: false,
+                currentStroke: null,
+                strokes: [],
+                serializedPayload: null,
+            };
+
+            let quizDataForSolver = null;
+            let solverSecondsLeft = 0;
+            let solverIntervalId = null;
+
+            function initKakaoShare() {
+                if (!window.Kakao || !kakaoJavaScriptKey) {
+                    return;
+                }
+
+                if (!window.Kakao.isInitialized()) {
+                    window.Kakao.init(kakaoJavaScriptKey);
+                }
+            }
+
+            function setupCanvasResolution() {
+                const pixelRatio = window.devicePixelRatio || 1;
+                const width = drawCanvas.clientWidth;
+                const height = drawCanvas.clientHeight;
+
+                drawCanvas.width = Math.floor(width * pixelRatio);
+                drawCanvas.height = Math.floor(height * pixelRatio);
+                canvasCtx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+                canvasCtx.lineCap = "round";
+                canvasCtx.lineJoin = "round";
+                canvasCtx.clearRect(0, 0, width, height);
+                redrawFromStrokes();
+            }
+
+            function getCanvasPoint(event) {
+                const rect = drawCanvas.getBoundingClientRect();
+                const source = event.touches ? event.touches[0] : event;
+                return {
+                    x: source.clientX - rect.left,
+                    y: source.clientY - rect.top,
+                };
+            }
+
+            function toCompactPoint(point) {
+                return [
+                    Math.round((point.x / drawCanvas.clientWidth) * 1000),
+                    Math.round((point.y / drawCanvas.clientHeight) * 1000),
+                ];
+            }
+
+            function fromCompactPoint(compactPoint) {
+                return {
+                    x: (compactPoint[0] / 1000) * drawCanvas.clientWidth,
+                    y: (compactPoint[1] / 1000) * drawCanvas.clientHeight,
+                };
+            }
+
+            function beginStroke(event) {
+                event.preventDefault();
+                const point = getCanvasPoint(event);
+                drawState.isDrawing = true;
+                drawState.currentStroke = {
+                    c: drawState.eraserOn ? "erase" : drawState.currentColor,
+                    w: drawState.currentSize,
+                    p: [toCompactPoint(point)],
+                };
+            }
+
+            function drawStrokePath(stroke) {
+                if (!stroke || !stroke.p || stroke.p.length === 0) {
+                    return;
+                }
+
+                canvasCtx.save();
+                canvasCtx.lineWidth = stroke.w;
+                canvasCtx.globalCompositeOperation =
+                    stroke.c === "erase" ? "destination-out" : "source-over";
+                canvasCtx.strokeStyle =
+                    stroke.c === "erase" ? "rgba(0,0,0,1)" : stroke.c;
+
+                const firstPoint = fromCompactPoint(stroke.p[0]);
+                canvasCtx.beginPath();
+                canvasCtx.moveTo(firstPoint.x, firstPoint.y);
+
+                for (let i = 1; i < stroke.p.length; i++) {
+                    const point = fromCompactPoint(stroke.p[i]);
+                    canvasCtx.lineTo(point.x, point.y);
+                }
+
+                canvasCtx.stroke();
+                canvasCtx.restore();
+            }
+
+            function continueStroke(event) {
+                if (!drawState.isDrawing || !drawState.currentStroke) {
+                    return;
+                }
+
+                event.preventDefault();
+                const point = getCanvasPoint(event);
+                drawState.currentStroke.p.push(toCompactPoint(point));
+
+                const stroke = drawState.currentStroke;
+                if (stroke.p.length >= 2) {
+                    const prevPoint = fromCompactPoint(
+                        stroke.p[stroke.p.length - 2],
+                    );
+                    const currPoint = fromCompactPoint(
+                        stroke.p[stroke.p.length - 1],
+                    );
+
+                    canvasCtx.save();
+                    canvasCtx.lineWidth = stroke.w;
+                    canvasCtx.lineCap = "round";
+                    canvasCtx.lineJoin = "round";
+                    canvasCtx.globalCompositeOperation =
+                        stroke.c === "erase"
+                            ? "destination-out"
+                            : "source-over";
+                    canvasCtx.strokeStyle =
+                        stroke.c === "erase" ? "rgba(0,0,0,1)" : stroke.c;
+
+                    canvasCtx.beginPath();
+                    canvasCtx.moveTo(prevPoint.x, prevPoint.y);
+                    canvasCtx.lineTo(currPoint.x, currPoint.y);
+                    canvasCtx.stroke();
+                    canvasCtx.restore();
+                }
+            }
+
+            function endStroke() {
+                if (!drawState.isDrawing || !drawState.currentStroke) {
+                    return;
+                }
+
+                drawState.isDrawing = false;
+                if (drawState.currentStroke.p.length === 1) {
+                    const onlyPoint = fromCompactPoint(
+                        drawState.currentStroke.p[0],
+                    );
+                    canvasCtx.save();
+                    canvasCtx.globalCompositeOperation =
+                        drawState.currentStroke.c === "erase"
+                            ? "destination-out"
+                            : "source-over";
+                    canvasCtx.fillStyle =
+                        drawState.currentStroke.c === "erase"
+                            ? "rgba(0,0,0,1)"
+                            : drawState.currentStroke.c;
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(
+                        onlyPoint.x,
+                        onlyPoint.y,
+                        drawState.currentStroke.w / 2,
+                        0,
+                        Math.PI * 2,
+                    );
+                    canvasCtx.fill();
+                    canvasCtx.restore();
+                }
+
+                drawState.strokes.push(drawState.currentStroke);
+                drawState.currentStroke = null;
+            }
+
+            function redrawFromStrokes() {
+                canvasCtx.clearRect(
+                    0,
+                    0,
+                    drawCanvas.clientWidth,
+                    drawCanvas.clientHeight,
+                );
+                drawState.strokes.forEach((stroke) => {
+                    drawStrokePath(stroke);
+                });
+            }
+
+            function setActiveColorButton(targetButton) {
+                colorButtons.forEach((button) =>
+                    button.classList.remove("active"),
+                );
+                if (targetButton) {
+                    targetButton.classList.add("active");
+                }
+            }
+
+            function utf8ToBase64(input) {
+                return btoa(unescape(encodeURIComponent(input)));
+            }
+
+            function base64ToUtf8(input) {
+                return decodeURIComponent(escape(atob(input)));
+            }
+
+            function normalizeAnswer(rawAnswer) {
+                return (rawAnswer || "").trim().toLowerCase();
+            }
+
+            function buildQuizPayload() {
+                const answer = answerInput.value.trim();
+                const hint = hintInput.value.trim() || "힌트 없음";
+                const limitSec = Math.max(
+                    10,
+                    Math.min(300, Number(limitInput.value) || 60),
+                );
+
+                if (!answer) {
+                    alert("정답을 입력해 주세요.");
+                    return null;
+                }
+
+                if (drawState.strokes.length === 0) {
+                    alert("그림을 먼저 그려 주세요.");
+                    return null;
+                }
+
+                const payload = {
+                    v: 1,
+                    a: normalizeAnswer(answer),
+                    h: hint,
+                    t: limitSec,
+                    s: drawState.strokes,
+                };
+
+                return payload;
+            }
+
+            function createQuizLink() {
+                const payload = buildQuizPayload();
+                if (!payload) {
+                    return null;
+                }
+
+                const payloadJson = JSON.stringify(payload);
+                const encodedPayload = utf8ToBase64(payloadJson);
+                const link = `${baseShareUrl}#quiz=${encodeURIComponent(encodedPayload)}`;
+
+                if (link.length > 7000) {
+                    alert(
+                        "그림 데이터가 너무 커서 링크 공유가 불안정할 수 있어요. 선을 줄이거나 간단하게 그려주세요.",
+                    );
+                }
+
+                drawState.serializedPayload = payload;
+                shareLinkBox.value = link;
+                return { link, payload };
+            }
+
+            async function shareQuizLink() {
+                const result = createQuizLink();
+                if (!result) {
+                    return;
+                }
+
+                const { link, payload } = result;
+                const shareTitle = "드로잉 퀴즈 도전장";
+                const shareDescription = `힌트: ${payload.h} | 제한 ${payload.t}초`;
+                const shareText = `${shareTitle}\n${shareDescription}\n${link}`;
+
+                if (
+                    window.Kakao &&
+                    window.Kakao.isInitialized &&
+                    window.Kakao.isInitialized() &&
+                    window.Kakao.Share
+                ) {
+                    window.Kakao.Share.sendDefault({
+                        objectType: "feed",
+                        content: {
+                            title: shareTitle,
+                            description: shareDescription,
+                            imageUrl:
+                                "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1200&q=80",
+                            link: {
+                                mobileWebUrl: link,
+                                webUrl: link,
+                            },
+                        },
+                        buttons: [
+                            {
+                                title: "퀴즈 풀기",
+                                link: {
+                                    mobileWebUrl: link,
+                                    webUrl: link,
+                                },
+                            },
+                        ],
+                    });
+                    return;
+                }
+
+                try {
+                    if (navigator.share) {
+                        await navigator.share({
+                            title: shareTitle,
+                            text: `${shareTitle}\n${shareDescription}`,
+                            url: link,
+                        });
+                        return;
+                    }
+                } catch (error) {
+                    if (error && error.name === "AbortError") {
+                        return;
+                    }
+                }
+
+                try {
+                    await navigator.clipboard.writeText(shareText);
+                    alert(
+                        "공유 링크를 복사했어요. 카카오톡에 붙여넣어 전송해 주세요.",
+                    );
+                } catch (error) {
+                    window.prompt(
+                        "아래 링크를 복사해서 공유해 주세요.",
+                        shareText,
+                    );
+                }
+            }
+
+            function setCreatorMode() {
+                creatorPanel.classList.remove("hidden");
+                solverPanel.classList.add("hidden");
+                modeBadge.textContent = "출제 모드";
+                modeBadge.className =
+                    "rounded-full border border-cyan-300/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-200";
+                drawCanvas.style.pointerEvents = "auto";
+                drawCanvas.classList.remove("opacity-80");
+            }
+
+            function setSolverMode(payload) {
+                creatorPanel.classList.add("hidden");
+                solverPanel.classList.remove("hidden");
+                modeBadge.textContent = "풀이 모드";
+                modeBadge.className =
+                    "rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200";
+
+                drawState.strokes = payload.s || [];
+                redrawFromStrokes();
+                drawCanvas.style.pointerEvents = "none";
+                drawCanvas.classList.add("opacity-80");
+
+                solverHint.textContent = payload.h || "힌트 없음";
+                quizDataForSolver = payload;
+                startSolverTimer(payload.t || 60);
+            }
+
+            function startSolverTimer(limitSec) {
+                clearInterval(solverIntervalId);
+                solverSecondsLeft = limitSec;
+                solverTimer.textContent = `${solverSecondsLeft}초`;
+
+                solverIntervalId = setInterval(() => {
+                    solverSecondsLeft -= 1;
+                    solverTimer.textContent = `${Math.max(0, solverSecondsLeft)}초`;
+
+                    if (solverSecondsLeft <= 0) {
+                        clearInterval(solverIntervalId);
+                        checkBtn.disabled = true;
+                        checkBtn.classList.add(
+                            "opacity-50",
+                            "cursor-not-allowed",
+                        );
+                        resultText.textContent =
+                            "시간 종료. 다음엔 더 빨리 맞춰보세요!";
+                        resultText.className =
+                            "rounded-xl border border-rose-300/30 bg-rose-500/10 p-3 text-sm text-rose-100";
+                    }
+                }, 1000);
+            }
+
+            function checkAnswer() {
+                if (!quizDataForSolver) {
+                    return;
+                }
+
+                const guess = normalizeAnswer(guessInput.value);
+                const answer = quizDataForSolver.a;
+
+                if (!guess) {
+                    resultText.textContent = "정답을 입력해 주세요.";
+                    resultText.className =
+                        "rounded-xl border border-amber-300/30 bg-amber-500/10 p-3 text-sm text-amber-100";
+                    return;
+                }
+
+                if (guess === answer) {
+                    clearInterval(solverIntervalId);
+                    resultText.textContent = "정답! 멋진 감각이에요.";
+                    resultText.className =
+                        "rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-3 text-sm text-emerald-100";
+                    checkBtn.disabled = true;
+                    checkBtn.classList.add("opacity-50", "cursor-not-allowed");
+                    return;
+                }
+
+                resultText.textContent =
+                    "오답! 힌트를 보고 다시 도전해 보세요.";
+                resultText.className =
+                    "rounded-xl border border-rose-300/30 bg-rose-500/10 p-3 text-sm text-rose-100";
+            }
+
+            function parseQuizFromHash() {
+                const hash = location.hash || "";
+                const match = hash.match(/quiz=([^&]+)/);
+                if (!match) {
+                    return null;
+                }
+
+                try {
+                    const encodedPayload = decodeURIComponent(match[1]);
+                    const payloadJson = base64ToUtf8(encodedPayload);
+                    const payload = JSON.parse(payloadJson);
+                    if (!payload || !Array.isArray(payload.s)) {
+                        return null;
+                    }
+                    return payload;
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            function attachCanvasEvents() {
+                drawCanvas.addEventListener("mousedown", beginStroke);
+                drawCanvas.addEventListener("mousemove", continueStroke);
+                window.addEventListener("mouseup", endStroke);
+
+                drawCanvas.addEventListener("touchstart", beginStroke, {
+                    passive: false,
+                });
+                drawCanvas.addEventListener("touchmove", continueStroke, {
+                    passive: false,
+                });
+                window.addEventListener("touchend", endStroke);
+            }
+
+            function initToolEvents() {
+                colorButtons.forEach((button) => {
+                    button.addEventListener("click", () => {
+                        drawState.eraserOn = false;
+                        drawState.currentColor = button.dataset.color;
+                        setActiveColorButton(button);
+                        eraserBtn.classList.remove("active");
+                    });
+                });
+
+                eraserBtn.addEventListener("click", () => {
+                    drawState.eraserOn = !drawState.eraserOn;
+                    if (drawState.eraserOn) {
+                        setActiveColorButton(null);
+                        eraserBtn.classList.add("active");
+                    } else {
+                        eraserBtn.classList.remove("active");
+                        const activeColorButton = colorButtons.find(
+                            (button) =>
+                                button.dataset.color === drawState.currentColor,
+                        );
+                        setActiveColorButton(
+                            activeColorButton || colorButtons[0],
+                        );
+                    }
+                });
+
+                sizeRange.addEventListener("input", (event) => {
+                    drawState.currentSize = Number(event.target.value);
+                });
+
+                undoBtn.addEventListener("click", () => {
+                    if (drawState.strokes.length === 0) {
+                        return;
+                    }
+                    drawState.strokes.pop();
+                    redrawFromStrokes();
+                });
+
+                clearBtn.addEventListener("click", () => {
+                    drawState.strokes = [];
+                    redrawFromStrokes();
+                });
+
+                makeLinkBtn.addEventListener("click", () => {
+                    const result = createQuizLink();
+                    if (!result) {
+                        return;
+                    }
+                    shareLinkBox.select();
+                    resultText.textContent =
+                        "문제 링크가 생성됐어요. 카카오로 전송해 보세요.";
+                });
+
+                shareBtn.addEventListener("click", () => {
+                    shareQuizLink();
+                });
+
+                checkBtn.addEventListener("click", checkAnswer);
+                guessInput.addEventListener("keydown", (event) => {
+                    if (event.key === "Enter") {
+                        checkAnswer();
+                    }
+                });
+            }
+
+            function initApp() {
+                initKakaoShare();
+                setupCanvasResolution();
+                attachCanvasEvents();
+                initToolEvents();
+
+                const payload = parseQuizFromHash();
+                if (payload) {
+                    setSolverMode(payload);
+                } else {
+                    setCreatorMode();
+                }
+
+                window.addEventListener("resize", setupCanvasResolution);
+            }
+
+            initApp();
+        </script>
+    </body>
+</html>
