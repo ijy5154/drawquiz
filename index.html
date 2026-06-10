@@ -691,6 +691,104 @@
                 return (rawAnswer || "").trim().toLowerCase();
             }
 
+            function getPointToSegmentDistanceSq(point, start, end) {
+                const px = point[0];
+                const py = point[1];
+                const sx = start[0];
+                const sy = start[1];
+                const ex = end[0];
+                const ey = end[1];
+
+                const dx = ex - sx;
+                const dy = ey - sy;
+
+                if (dx === 0 && dy === 0) {
+                    const ddx = px - sx;
+                    const ddy = py - sy;
+                    return ddx * ddx + ddy * ddy;
+                }
+
+                const t = Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        ((px - sx) * dx + (py - sy) * dy) / (dx * dx + dy * dy),
+                    ),
+                );
+                const closestX = sx + dx * t;
+                const closestY = sy + dy * t;
+                const ddx = px - closestX;
+                const ddy = py - closestY;
+                return ddx * ddx + ddy * ddy;
+            }
+
+            function simplifyStrokePoints(points, tolerance) {
+                if (!Array.isArray(points) || points.length <= 2) {
+                    return points;
+                }
+
+                const toleranceSq = tolerance * tolerance;
+                const keep = new Array(points.length).fill(false);
+                keep[0] = true;
+                keep[points.length - 1] = true;
+
+                const stack = [[0, points.length - 1]];
+                while (stack.length > 0) {
+                    const [startIndex, endIndex] = stack.pop();
+                    let maxDistanceSq = 0;
+                    let maxIndex = -1;
+
+                    for (let i = startIndex + 1; i < endIndex; i++) {
+                        const distanceSq = getPointToSegmentDistanceSq(
+                            points[i],
+                            points[startIndex],
+                            points[endIndex],
+                        );
+                        if (distanceSq > maxDistanceSq) {
+                            maxDistanceSq = distanceSq;
+                            maxIndex = i;
+                        }
+                    }
+
+                    if (maxIndex !== -1 && maxDistanceSq > toleranceSq) {
+                        keep[maxIndex] = true;
+                        stack.push([startIndex, maxIndex]);
+                        stack.push([maxIndex, endIndex]);
+                    }
+                }
+
+                return points.filter((_, index) => keep[index]);
+            }
+
+            function simplifyStrokesForPayload(strokes) {
+                return strokes.map((stroke) => {
+                    if (
+                        !stroke ||
+                        !Array.isArray(stroke.p) ||
+                        stroke.p.length <= 2
+                    ) {
+                        return stroke;
+                    }
+
+                    const tolerance =
+                        stroke.c === "erase"
+                            ? 3
+                            : Math.max(
+                                  2,
+                                  Math.min(8, Math.round(stroke.w * 0.75)),
+                              );
+                    const simplifiedPoints = simplifyStrokePoints(
+                        stroke.p,
+                        tolerance,
+                    );
+
+                    return {
+                        ...stroke,
+                        p: simplifiedPoints,
+                    };
+                });
+            }
+
             function buildQuizPayload() {
                 const answer = answerInput.value.trim();
                 const hint = hintInput.value.trim() || "힌트 없음";
@@ -714,7 +812,7 @@
                     a: normalizeAnswer(answer),
                     h: hint,
                     t: limitSec,
-                    s: drawState.strokes,
+                    s: simplifyStrokesForPayload(drawState.strokes),
                 };
 
                 return payload;
