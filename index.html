@@ -119,51 +119,111 @@
 
                     <div class="mb-4 flex flex-wrap items-center gap-2">
                         <button
-                            class="toolBtn active rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                            class="toolBtn active inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
                             data-color="#f8fafc"
                         >
+                            <span
+                                class="h-2.5 w-2.5 rounded-full border border-white/40 bg-slate-50"
+                            ></span>
                             화이트
                         </button>
                         <button
-                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                            class="toolBtn inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
                             data-color="#f59e0b"
                         >
+                            <span
+                                class="h-2.5 w-2.5 rounded-full bg-amber-500"
+                            ></span>
                             오렌지
                         </button>
                         <button
-                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                            class="toolBtn inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
                             data-color="#22d3ee"
                         >
+                            <span
+                                class="h-2.5 w-2.5 rounded-full bg-cyan-400"
+                            ></span>
                             시안
                         </button>
                         <button
-                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                            class="toolBtn inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
                             data-color="#34d399"
                         >
+                            <span
+                                class="h-2.5 w-2.5 rounded-full bg-emerald-400"
+                            ></span>
                             민트
                         </button>
                         <button
-                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                            class="toolBtn inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
                             data-color="#f43f5e"
                         >
+                            <span
+                                class="h-2.5 w-2.5 rounded-full bg-rose-500"
+                            ></span>
                             로즈
                         </button>
                         <button
                             id="eraserBtn"
-                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                            class="toolBtn inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
                         >
+                            <svg
+                                viewBox="0 0 24 24"
+                                class="h-3.5 w-3.5 text-slate-200"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M20 20H9" />
+                                <path d="M14.5 4.5l5 5" />
+                                <path
+                                    d="M6 13l7.5-7.5a1.4 1.4 0 0 1 2 0l3 3a1.4 1.4 0 0 1 0 2L11 18H6v-5z"
+                                />
+                            </svg>
                             지우개
                         </button>
                         <button
                             id="undoBtn"
-                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                            class="toolBtn inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
                         >
+                            <svg
+                                viewBox="0 0 24 24"
+                                class="h-3.5 w-3.5 text-slate-200"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M9 14L4 9l5-5" />
+                                <path d="M4 9h9a7 7 0 1 1 0 14h-2" />
+                            </svg>
                             실행 취소
                         </button>
                         <button
                             id="clearBtn"
-                            class="toolBtn rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
+                            class="toolBtn inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold"
                         >
+                            <svg
+                                viewBox="0 0 24 24"
+                                class="h-3.5 w-3.5 text-slate-200"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M3 6h18" />
+                                <path d="M8 6V4h8v2" />
+                                <path d="M6 6l1 14h10l1-14" />
+                                <path d="M10 10v7" />
+                                <path d="M14 10v7" />
+                            </svg>
                             전체 지우기
                         </button>
                         <label
@@ -235,14 +295,47 @@
 
                         <button
                             id="makeLinkBtn"
-                            class="w-full rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-2.5 text-sm font-black text-slate-950 transition hover:scale-[1.01]"
+                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-2.5 text-sm font-black text-slate-950 transition hover:scale-[1.01]"
                         >
+                            <svg
+                                viewBox="0 0 24 24"
+                                class="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1"
+                                />
+                                <path
+                                    d="M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1"
+                                />
+                            </svg>
                             문제 링크 만들기
                         </button>
                         <button
                             id="shareBtn"
-                            class="w-full rounded-xl border border-cyan-300/40 bg-slate-900/90 px-4 py-2.5 text-sm font-bold text-cyan-200 transition hover:bg-cyan-500/10"
+                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-cyan-300/40 bg-slate-900/90 px-4 py-2.5 text-sm font-bold text-cyan-200 transition hover:bg-cyan-500/10"
                         >
+                            <svg
+                                viewBox="0 0 24 24"
+                                class="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"
+                                />
+                                <path d="M16 6l-4-4-4 4" />
+                                <path d="M12 2v13" />
+                            </svg>
                             카카오로 문제 보내기
                         </button>
 
