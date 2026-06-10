@@ -302,6 +302,12 @@
                         >
                             정답 확인
                         </button>
+                        <button
+                            id="newQuizBtn"
+                            class="hidden w-full rounded-xl border border-amber-300/40 bg-amber-400/10 px-4 py-2.5 text-sm font-bold text-amber-100 transition hover:bg-amber-400/20"
+                        >
+                            새 문제 출제하기
+                        </button>
                         <p
                             id="resultText"
                             class="rounded-xl border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200"
@@ -342,6 +348,7 @@
             const solverTimer = document.getElementById("solverTimer");
             const guessInput = document.getElementById("guessInput");
             const checkBtn = document.getElementById("checkBtn");
+            const newQuizBtn = document.getElementById("newQuizBtn");
             const resultText = document.getElementById("resultText");
 
             const drawState = {
@@ -718,6 +725,45 @@
                 drawCanvas.classList.remove("opacity-80");
             }
 
+            function resetToCreatorFromSolver() {
+                clearInterval(solverIntervalId);
+                quizDataForSolver = null;
+                solverSecondsLeft = 0;
+
+                drawState.isDrawing = false;
+                drawState.currentStroke = null;
+                drawState.strokes = [];
+                drawState.serializedPayload = null;
+                drawState.eraserOn = false;
+
+                answerInput.value = "";
+                hintInput.value = "";
+                limitInput.value = "60";
+                shareLinkBox.value = "";
+                guessInput.value = "";
+
+                checkBtn.disabled = false;
+                checkBtn.classList.remove("opacity-50", "cursor-not-allowed");
+                newQuizBtn.classList.add("hidden");
+                eraserBtn.classList.remove("active");
+                setActiveColorButton(
+                    colorButtons.find(
+                        (button) =>
+                            button.dataset.color === drawState.currentColor,
+                    ) || colorButtons[0],
+                );
+
+                resultText.textContent =
+                    "새 문제를 만들 준비가 됐어요. 그림을 그리고 링크를 공유해 보세요.";
+                resultText.className =
+                    "rounded-xl border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200";
+
+                redrawFromStrokes();
+                setCreatorMode();
+                history.replaceState(null, "", baseShareUrl);
+                answerInput.focus();
+            }
+
             function setSolverMode(payload) {
                 creatorPanel.classList.add("hidden");
                 solverPanel.classList.remove("hidden");
@@ -732,6 +778,10 @@
 
                 solverHint.textContent = payload.h || "힌트 없음";
                 quizDataForSolver = payload;
+                guessInput.value = "";
+                checkBtn.disabled = false;
+                checkBtn.classList.remove("opacity-50", "cursor-not-allowed");
+                newQuizBtn.classList.add("hidden");
                 startSolverTimer(payload.t || 60);
             }
 
@@ -781,6 +831,7 @@
                         "rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-3 text-sm text-emerald-100";
                     checkBtn.disabled = true;
                     checkBtn.classList.add("opacity-50", "cursor-not-allowed");
+                    newQuizBtn.classList.remove("hidden");
                     return;
                 }
 
@@ -886,6 +937,7 @@
                 });
 
                 checkBtn.addEventListener("click", checkAnswer);
+                newQuizBtn.addEventListener("click", resetToCreatorFromSolver);
                 guessInput.addEventListener("keydown", (event) => {
                     if (event.key === "Enter") {
                         checkAnswer();
