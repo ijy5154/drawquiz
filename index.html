@@ -6,6 +6,7 @@
         <title>드로우 퀴즈</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
         <style>
             body {
                 font-family:
@@ -541,6 +542,39 @@
                 return decodeURIComponent(escape(atob(input)));
             }
 
+            function encodePayloadString(payloadJson) {
+                if (
+                    window.LZString &&
+                    window.LZString.compressToEncodedURIComponent
+                ) {
+                    return `lz:${window.LZString.compressToEncodedURIComponent(payloadJson)}`;
+                }
+
+                return `b64:${utf8ToBase64(payloadJson)}`;
+            }
+
+            function decodePayloadString(encodedPayload) {
+                if (encodedPayload.startsWith("lz:")) {
+                    if (
+                        !window.LZString ||
+                        !window.LZString.decompressFromEncodedURIComponent
+                    ) {
+                        return null;
+                    }
+
+                    return window.LZString.decompressFromEncodedURIComponent(
+                        encodedPayload.slice(3),
+                    );
+                }
+
+                if (encodedPayload.startsWith("b64:")) {
+                    return base64ToUtf8(encodedPayload.slice(4));
+                }
+
+                // Backward compatibility for legacy links that only stored base64.
+                return base64ToUtf8(encodedPayload);
+            }
+
             function normalizeAnswer(rawAnswer) {
                 return (rawAnswer || "").trim().toLowerCase();
             }
@@ -581,8 +615,8 @@
                 }
 
                 const payloadJson = JSON.stringify(payload);
-                const encodedPayload = utf8ToBase64(payloadJson);
-                const link = `${baseShareUrl}#quiz=${encodeURIComponent(encodedPayload)}`;
+                const encodedPayload = encodePayloadString(payloadJson);
+                const link = `${baseShareUrl}#quiz=${encodedPayload}`;
 
                 if (link.length > 7000) {
                     alert(
@@ -606,7 +640,10 @@
                 const shareDescription = `힌트: ${payload.h} | 제한 ${payload.t}초`;
                 const shareText = `${shareTitle}\n${shareDescription}\n${link}`;
 
+                const isKakaoShareSafe = link.length <= 1900;
+
                 if (
+                    isKakaoShareSafe &&
                     window.Kakao &&
                     window.Kakao.isInitialized &&
                     window.Kakao.isInitialized() &&
@@ -654,9 +691,15 @@
 
                 try {
                     await navigator.clipboard.writeText(shareText);
-                    alert(
-                        "공유 링크를 복사했어요. 카카오톡에 붙여넣어 전송해 주세요.",
-                    );
+                    if (!isKakaoShareSafe) {
+                        alert(
+                            "링크가 길어 카카오 SDK 공유 대신 링크 복사로 전환했어요. 카카오톡에 붙여넣어 전송해 주세요.",
+                        );
+                    } else {
+                        alert(
+                            "공유 링크를 복사했어요. 카카오톡에 붙여넣어 전송해 주세요.",
+                        );
+                    }
                 } catch (error) {
                     window.prompt(
                         "아래 링크를 복사해서 공유해 주세요.",
@@ -756,7 +799,10 @@
 
                 try {
                     const encodedPayload = decodeURIComponent(match[1]);
-                    const payloadJson = base64ToUtf8(encodedPayload);
+                    const payloadJson = decodePayloadString(encodedPayload);
+                    if (!payloadJson) {
+                        return null;
+                    }
                     const payload = JSON.parse(payloadJson);
                     if (!payload || !Array.isArray(payload.s)) {
                         return null;
