@@ -409,6 +409,12 @@
                             정답 확인
                         </button>
                         <button
+                            id="giveupBtn"
+                            class="w-full rounded-xl border border-slate-400/40 bg-slate-500/10 px-4 py-2.5 text-sm font-bold text-slate-200 transition hover:bg-slate-400/20"
+                        >
+                            포기하기
+                        </button>
+                        <button
                             id="newQuizBtn"
                             class="hidden w-full rounded-xl border border-amber-300/40 bg-amber-400/10 px-4 py-2.5 text-sm font-bold text-amber-100 transition hover:bg-amber-400/20"
                         >
@@ -456,6 +462,7 @@
             const solverTimer = document.getElementById("solverTimer");
             const guessInput = document.getElementById("guessInput");
             const checkBtn = document.getElementById("checkBtn");
+            const giveupBtn = document.getElementById("giveupBtn");
             const newQuizBtn = document.getElementById("newQuizBtn");
             const resultText = document.getElementById("resultText");
 
@@ -1274,6 +1281,8 @@
 
                 checkBtn.disabled = false;
                 checkBtn.classList.remove("opacity-50", "cursor-not-allowed");
+                giveupBtn.disabled = false;
+                giveupBtn.classList.remove("opacity-50", "cursor-not-allowed");
                 newQuizBtn.classList.add("hidden");
                 eraserBtn.classList.remove("active");
                 setActiveColorButton(
@@ -1318,6 +1327,8 @@
                 guessInput.value = "";
                 checkBtn.disabled = false;
                 checkBtn.classList.remove("opacity-50", "cursor-not-allowed");
+                giveupBtn.disabled = false;
+                giveupBtn.classList.remove("opacity-50", "cursor-not-allowed");
                 newQuizBtn.classList.add("hidden");
                 startSolverTimer(payload.t || 60);
             }
@@ -1376,6 +1387,23 @@
                     "오답! 힌트를 보고 다시 도전해 보세요.";
                 resultText.className =
                     "rounded-xl border border-rose-300/30 bg-rose-500/10 p-3 text-sm text-rose-100";
+            }
+
+            function giveUpQuiz() {
+                if (!quizDataForSolver) {
+                    return;
+                }
+
+                clearInterval(solverIntervalId);
+                const answer = quizDataForSolver.a;
+                resultText.textContent = `포기하셨어요. 정답은 "${answer}"입니다.`;
+                resultText.className =
+                    "rounded-xl border border-slate-300/30 bg-slate-500/10 p-3 text-sm text-slate-100";
+                checkBtn.disabled = true;
+                checkBtn.classList.add("opacity-50", "cursor-not-allowed");
+                giveupBtn.disabled = true;
+                giveupBtn.classList.add("opacity-50", "cursor-not-allowed");
+                newQuizBtn.classList.remove("hidden");
             }
 
             function revealHint() {
@@ -1482,6 +1510,7 @@
 
                 hintRevealBtn.addEventListener("click", revealHint);
                 checkBtn.addEventListener("click", checkAnswer);
+                giveupBtn.addEventListener("click", giveUpQuiz);
                 newQuizBtn.addEventListener("click", resetToCreatorFromSolver);
                 guessInput.addEventListener("keydown", (event) => {
                     if (event.key === "Enter") {
