@@ -118,6 +118,39 @@
                     </div>
 
                     <div
+                        id="payloadGaugeWrap"
+                        class="mb-4 rounded-2xl border border-white/15 bg-slate-900/70 p-3"
+                    >
+                        <div
+                            class="mb-1.5 flex items-center justify-between gap-2 text-xs"
+                        >
+                            <p
+                                id="payloadGaugeLabel"
+                                class="font-semibold tracking-wide text-cyan-200"
+                            >
+                                카카오 공유 길이 게이지
+                            </p>
+                            <p id="payloadGaugeCount" class="text-slate-300">
+                                0 / 2084
+                            </p>
+                        </div>
+                        <div
+                            class="h-2.5 w-full overflow-hidden rounded-full bg-slate-700/70"
+                        >
+                            <div
+                                id="payloadGaugeBar"
+                                class="h-full w-0 rounded-full bg-cyan-400 transition-all duration-150"
+                            ></div>
+                        </div>
+                        <p
+                            id="payloadGaugeHint"
+                            class="mt-1.5 text-[11px] text-slate-400"
+                        >
+                            그림을 그리면 공유 링크 길이를 실시간으로 계산해요.
+                        </p>
+                    </div>
+
+                    <div
                         id="drawToolPanel"
                         class="mb-4 flex flex-wrap items-center gap-2"
                     >
@@ -434,6 +467,8 @@
         <script>
             const kakaoJavaScriptKey = "1b80ad054f416ba4241300feac182db2";
             const baseShareUrl = `https://ijy5154.github.io/drawquiz/`;
+            const kakaoShareTotalLengthLimit = 2084;
+            const kakaoSdkParamReserveLength = 180;
 
             const drawCanvas = document.getElementById("drawCanvas");
             const canvasCtx = drawCanvas.getContext("2d");
@@ -445,6 +480,13 @@
             const clearBtn = document.getElementById("clearBtn");
             const sizeRange = document.getElementById("sizeRange");
             const drawToolPanel = document.getElementById("drawToolPanel");
+            const payloadGaugeBar = document.getElementById("payloadGaugeBar");
+            const payloadGaugeCount =
+                document.getElementById("payloadGaugeCount");
+            const payloadGaugeHint =
+                document.getElementById("payloadGaugeHint");
+            const payloadGaugeLabel =
+                document.getElementById("payloadGaugeLabel");
 
             const creatorPanel = document.getElementById("creatorPanel");
             const solverPanel = document.getElementById("solverPanel");
@@ -474,6 +516,7 @@
                 currentStroke: null,
                 strokes: [],
                 serializedPayload: null,
+                limitAlertShown: false,
             };
 
             let quizDataForSolver = null;
@@ -530,8 +573,22 @@
 
             function beginStroke(event) {
                 event.preventDefault();
+
+                const currentLengthInfo = estimateShareLength(
+                    drawState.strokes,
+                );
+                if (
+                    currentLengthInfo &&
+                    currentLengthInfo.estimatedTotalLength >=
+                        kakaoShareTotalLengthLimit
+                ) {
+                    notifyDrawLimitReached();
+                    return;
+                }
+
                 const point = getCanvasPoint(event);
                 drawState.isDrawing = true;
+                drawState.limitAlertShown = false;
                 drawState.currentStroke = {
                     c: drawState.eraserOn ? "erase" : drawState.currentColor,
                     w: drawState.currentSize,
@@ -573,6 +630,22 @@
                 const point = getCanvasPoint(event);
                 drawState.currentStroke.p.push(toCompactPoint(point));
 
+                const projectedLengthInfo = estimateShareLength([
+                    ...drawState.strokes,
+                    drawState.currentStroke,
+                ]);
+
+                if (
+                    projectedLengthInfo &&
+                    projectedLengthInfo.estimatedTotalLength >
+                        kakaoShareTotalLengthLimit
+                ) {
+                    drawState.currentStroke.p.pop();
+                    notifyDrawLimitReached();
+                    endStroke();
+                    return;
+                }
+
                 const stroke = drawState.currentStroke;
                 if (stroke.p.length >= 2) {
                     const prevPoint = fromCompactPoint(
@@ -607,24 +680,41 @@
                 }
 
                 drawState.isDrawing = false;
-                if (drawState.currentStroke.p.length === 1) {
-                    const onlyPoint = fromCompactPoint(
-                        drawState.currentStroke.p[0],
-                    );
+                const completedStroke = drawState.currentStroke;
+                drawState.currentStroke = null;
+
+                const projectedLengthInfo = estimateShareLength([
+                    ...drawState.strokes,
+                    completedStroke,
+                ]);
+
+                if (
+                    projectedLengthInfo &&
+                    projectedLengthInfo.estimatedTotalLength >
+                        kakaoShareTotalLengthLimit
+                ) {
+                    notifyDrawLimitReached();
+                    redrawFromStrokes();
+                    updatePayloadGauge();
+                    return;
+                }
+
+                if (completedStroke.p.length === 1) {
+                    const onlyPoint = fromCompactPoint(completedStroke.p[0]);
                     canvasCtx.save();
                     canvasCtx.globalCompositeOperation =
-                        drawState.currentStroke.c === "erase"
+                        completedStroke.c === "erase"
                             ? "destination-out"
                             : "source-over";
                     canvasCtx.fillStyle =
-                        drawState.currentStroke.c === "erase"
+                        completedStroke.c === "erase"
                             ? "rgba(0,0,0,1)"
-                            : drawState.currentStroke.c;
+                            : completedStroke.c;
                     canvasCtx.beginPath();
                     canvasCtx.arc(
                         onlyPoint.x,
                         onlyPoint.y,
-                        drawState.currentStroke.w / 2,
+                        completedStroke.w / 2,
                         0,
                         Math.PI * 2,
                     );
@@ -632,8 +722,8 @@
                     canvasCtx.restore();
                 }
 
-                drawState.strokes.push(drawState.currentStroke);
-                drawState.currentStroke = null;
+                drawState.strokes.push(completedStroke);
+                updatePayloadGauge(projectedLengthInfo);
             }
 
             function redrawFromStrokes() {
@@ -1152,6 +1242,106 @@
                 return payload;
             }
 
+            function buildPayloadDraft(strokes) {
+                const answer = answerInput.value.trim();
+                const hint = hintInput.value.trim() || "힌트 없음";
+                const limitSec = Math.max(
+                    10,
+                    Math.min(300, Number(limitInput.value) || 60),
+                );
+
+                return {
+                    v: 1,
+                    a: normalizeAnswer(answer),
+                    h: hint,
+                    t: limitSec,
+                    s: simplifyStrokesForPayload(
+                        Array.isArray(strokes) ? strokes : [],
+                    ),
+                };
+            }
+
+            function estimateShareLength(strokes) {
+                try {
+                    const payloadDraft = buildPayloadDraft(strokes);
+                    const encodedPayload = encodePayloadString(payloadDraft);
+                    const link = `${baseShareUrl}#quiz=${encodedPayload}`;
+
+                    return {
+                        payload: payloadDraft,
+                        encodedPayload,
+                        link,
+                        linkLength: link.length,
+                        estimatedTotalLength:
+                            link.length + kakaoSdkParamReserveLength,
+                    };
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            function notifyDrawLimitReached() {
+                if (drawState.limitAlertShown) {
+                    return;
+                }
+
+                drawState.limitAlertShown = true;
+                alert(
+                    "카카오 공유 전체 길이(2084자, SDK 파라미터 포함) 한도에 도달했어요. 실행 취소/전체 지우기 또는 힌트 축약으로 여유를 만들어 주세요.",
+                );
+            }
+
+            function updatePayloadGauge(lengthInfo) {
+                const info =
+                    lengthInfo || estimateShareLength(drawState.strokes);
+                const safeLength = info?.estimatedTotalLength || 0;
+                const usageRatio = Math.min(
+                    1,
+                    safeLength / kakaoShareTotalLengthLimit,
+                );
+                const usagePercent = Math.round(usageRatio * 100);
+                const remaining = Math.max(
+                    0,
+                    kakaoShareTotalLengthLimit - safeLength,
+                );
+
+                payloadGaugeCount.textContent = `${safeLength} / ${kakaoShareTotalLengthLimit}`;
+                payloadGaugeBar.style.width = `${usagePercent}%`;
+
+                payloadGaugeBar.classList.remove(
+                    "bg-cyan-400",
+                    "bg-amber-400",
+                    "bg-rose-400",
+                );
+
+                if (safeLength >= kakaoShareTotalLengthLimit) {
+                    payloadGaugeBar.classList.add("bg-rose-400");
+                    payloadGaugeLabel.textContent =
+                        "카카오 공유 길이 게이지 (한도 도달)";
+                    payloadGaugeHint.textContent =
+                        "SDK 파라미터 포함 2084자 제한을 넘길 수 있어요. 일부 선을 줄여 주세요.";
+                    payloadGaugeHint.className =
+                        "mt-1.5 text-[11px] text-rose-300";
+                    return;
+                }
+
+                if (usageRatio >= 0.85) {
+                    payloadGaugeBar.classList.add("bg-amber-400");
+                    payloadGaugeLabel.textContent =
+                        "카카오 공유 길이 게이지 (주의 구간)";
+                    payloadGaugeHint.textContent = `한도까지 약 ${remaining}자 남았어요.`;
+                    payloadGaugeHint.className =
+                        "mt-1.5 text-[11px] text-amber-300";
+                    return;
+                }
+
+                payloadGaugeBar.classList.add("bg-cyan-400");
+                payloadGaugeLabel.textContent = "카카오 공유 길이 게이지";
+                payloadGaugeHint.textContent = `한도까지 약 ${remaining}자 남았어요.`;
+                payloadGaugeHint.className =
+                    "mt-1.5 text-[11px] text-slate-400";
+            }
+
             function createQuizLink() {
                 const payload = buildQuizPayload();
                 if (!payload) {
@@ -1160,15 +1350,19 @@
 
                 const encodedPayload = encodePayloadString(payload);
                 const link = `${baseShareUrl}#quiz=${encodedPayload}`;
+                const estimatedTotalLength =
+                    link.length + kakaoSdkParamReserveLength;
 
-                if (link.length > 7000) {
+                if (estimatedTotalLength > kakaoShareTotalLengthLimit) {
                     alert(
-                        "그림 데이터가 너무 커서 링크 공유가 불안정할 수 있어요. 선을 줄이거나 간단하게 그려주세요.",
+                        "카카오 공유 전체 길이(2084자, SDK 파라미터 포함) 한도를 초과했어요. 선을 줄이거나 힌트를 짧게 수정해 주세요.",
                     );
+                    return null;
                 }
 
                 drawState.serializedPayload = payload;
                 shareLinkBox.value = link;
+                updatePayloadGauge({ estimatedTotalLength });
                 return { link, payload };
             }
 
@@ -1183,7 +1377,9 @@
                 const shareDescription = `제한 ${payload.t}초`;
                 const shareText = `${shareTitle}\n${shareDescription}\n${link}`;
 
-                const isKakaoShareSafe = link.length <= 1900;
+                const isKakaoShareSafe =
+                    link.length + kakaoSdkParamReserveLength <=
+                    kakaoShareTotalLengthLimit;
 
                 if (
                     isKakaoShareSafe &&
@@ -1272,6 +1468,7 @@
                 drawState.strokes = [];
                 drawState.serializedPayload = null;
                 drawState.eraserOn = false;
+                drawState.limitAlertShown = false;
 
                 answerInput.value = "";
                 hintInput.value = "";
@@ -1298,6 +1495,7 @@
                     "rounded-xl border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200";
 
                 redrawFromStrokes();
+                updatePayloadGauge();
                 setCreatorMode();
                 history.replaceState(null, "", baseShareUrl);
                 answerInput.focus();
@@ -1312,6 +1510,7 @@
 
                 drawState.strokes = payload.s || [];
                 redrawFromStrokes();
+                updatePayloadGauge();
                 drawCanvas.style.pointerEvents = "none";
                 drawCanvas.classList.add("opacity-80");
                 drawToolPanel.classList.add("hidden");
@@ -1481,17 +1680,33 @@
                     drawState.currentSize = Number(event.target.value);
                 });
 
+                answerInput.addEventListener("input", () => {
+                    updatePayloadGauge();
+                });
+
+                hintInput.addEventListener("input", () => {
+                    updatePayloadGauge();
+                });
+
+                limitInput.addEventListener("input", () => {
+                    updatePayloadGauge();
+                });
+
                 undoBtn.addEventListener("click", () => {
                     if (drawState.strokes.length === 0) {
                         return;
                     }
                     drawState.strokes.pop();
                     redrawFromStrokes();
+                    drawState.limitAlertShown = false;
+                    updatePayloadGauge();
                 });
 
                 clearBtn.addEventListener("click", () => {
                     drawState.strokes = [];
+                    drawState.limitAlertShown = false;
                     redrawFromStrokes();
+                    updatePayloadGauge();
                 });
 
                 makeLinkBtn.addEventListener("click", () => {
@@ -1524,6 +1739,7 @@
                 setupCanvasResolution();
                 attachCanvasEvents();
                 initToolEvents();
+                updatePayloadGauge();
 
                 const payload = parseQuizFromHash();
                 if (payload) {
