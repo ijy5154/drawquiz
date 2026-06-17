@@ -155,7 +155,7 @@
                                 id="payloadGaugeLabel"
                                 class="font-semibold tracking-wide text-cyan-200"
                             >
-                                카카오 공유 길이 게이지
+                                붓 사용 길이
                             </p>
                             <p id="payloadGaugeCount" class="text-slate-300">
                                 0 / 2084
@@ -173,7 +173,7 @@
                             id="payloadGaugeHint"
                             class="mt-1.5 text-[11px] text-slate-400"
                         >
-                            그림을 그리면 공유 링크 길이를 실시간으로 계산해요.
+                            그림을 그리면 붓 사용 길이를 실시간으로 계산해요.
                         </p>
                     </div>
 
@@ -1343,8 +1343,7 @@
 
                 if (safeLength >= kakaoShareTotalLengthLimit) {
                     payloadGaugeBar.classList.add("bg-rose-400");
-                    payloadGaugeLabel.textContent =
-                        "카카오 공유 길이 게이지 (한도 도달)";
+                    payloadGaugeLabel.textContent = "붓 사용 길이 (한도 도달)";
                     payloadGaugeHint.textContent =
                         "SDK 파라미터 포함 2084자 제한을 넘길 수 있어요. 일부 선을 줄여 주세요.";
                     payloadGaugeHint.className =
@@ -1354,8 +1353,7 @@
 
                 if (usageRatio >= 0.85) {
                     payloadGaugeBar.classList.add("bg-amber-400");
-                    payloadGaugeLabel.textContent =
-                        "카카오 공유 길이 게이지 (주의 구간)";
+                    payloadGaugeLabel.textContent = "붓 사용 길이 (주의 구간)";
                     payloadGaugeHint.textContent = `한도까지 약 ${remaining}자 남았어요.`;
                     payloadGaugeHint.className =
                         "mt-1.5 text-[11px] text-amber-300";
@@ -1363,7 +1361,7 @@
                 }
 
                 payloadGaugeBar.classList.add("bg-cyan-400");
-                payloadGaugeLabel.textContent = "카카오 공유 길이 게이지";
+                payloadGaugeLabel.textContent = "붓 사용 길이";
                 payloadGaugeHint.textContent = `한도까지 약 ${remaining}자 남았어요.`;
                 payloadGaugeHint.className =
                     "mt-1.5 text-[11px] text-slate-400";
