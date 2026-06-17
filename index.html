@@ -550,6 +550,8 @@
             let solverSecondsLeft = 0;
             let solverIntervalId = null;
             let hintRevealed = false;
+            let wrongGuessCount = 0;
+            const maxWrongGuesses = 3;
 
             function initKakaoShare() {
                 if (!window.Kakao || !kakaoJavaScriptKey) {
@@ -1501,6 +1503,7 @@
                 shareLinkBox.value = "";
                 guessInput.value = "";
 
+                wrongGuessCount = 0;
                 checkBtn.disabled = false;
                 checkBtn.classList.remove("opacity-50", "cursor-not-allowed");
                 giveupBtn.disabled = false;
@@ -1548,6 +1551,7 @@
                     "cursor-not-allowed",
                 );
                 quizDataForSolver = payload;
+                wrongGuessCount = 0;
                 guessInput.value = "";
                 checkBtn.disabled = false;
                 checkBtn.classList.remove("opacity-50", "cursor-not-allowed");
@@ -1608,8 +1612,15 @@
                     return;
                 }
 
-                resultText.textContent =
-                    "오답! 힌트를 보고 다시 도전해 보세요.";
+                wrongGuessCount += 1;
+                const attemptsLeft = maxWrongGuesses - wrongGuessCount;
+
+                if (attemptsLeft <= 0) {
+                    giveUpQuiz();
+                    return;
+                }
+
+                resultText.textContent = `오답! 기회가 ${attemptsLeft}번 남았어요.`;
                 resultText.className =
                     "rounded-xl border border-rose-300/30 bg-rose-500/10 p-3 text-sm text-rose-100";
             }
